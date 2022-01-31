@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'planner = planner.planner:main',
             'fake_waypoints = planner.fake_waypoint_publisher:main',
+            'waypoint_visualiser = planner.waypoint_visualiser:main',
         ],
     },
 )
