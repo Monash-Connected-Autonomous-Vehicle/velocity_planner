@@ -35,6 +35,7 @@ class VelocityPlanner(Node):
         self.global_wp_coords = np.array([(wp.pose.position.x, wp.pose.position.y) for wp in msg.waypoints])
 
     def find_nearest_waypoint(self) -> int:
+        # algorithm from https://codereview.stackexchange.com/a/28210
         deltas = self.global_wp_coords - self.position
         dist_2 = np.einsum('ij,ij->i', deltas, deltas)
         return np.argmin(dist_2)
