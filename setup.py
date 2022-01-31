@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'planner = planner.planner:main',
             'fake_waypoints = planner.fake_waypoint_publisher:main',
         ],
     },
