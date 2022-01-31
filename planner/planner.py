@@ -19,7 +19,7 @@ class Planner(Node):
         self.waypoints_sub  # prevent unused variable warning
         self.waypoints_pub = self.create_publisher(WaypointArray, 'local_waypoints', 10)
 
-        self.local_wp_max_length = 20 # TODO: make ros param
+        self.local_wp_max_length = 40 # TODO: make ros param
 
         self.position = np.array([])
         self.global_waypoints = []
@@ -48,7 +48,6 @@ class Planner(Node):
                 local_wp_msg = WaypointArray()
                 local_wp_msg.waypoints = local_waypoints
                 self.waypoints_pub.publish(local_wp_msg)
-                print(len(local_waypoints))
 
 
 def main(args=None):

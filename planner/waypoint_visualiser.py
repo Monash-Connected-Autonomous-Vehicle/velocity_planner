@@ -31,13 +31,16 @@ class WaypointVisualiser(Node):
             marker.header.frame_id = waypoints[0].frame_id
             marker.ns = namespace
             marker.id = index
-            marker.type = Marker.ARROW
+            marker.type = Marker.SPHERE if is_local else Marker.ARROW
             marker.action = Marker.ADD
             marker.pose = waypoint.pose
-            marker.scale.x = 0.5
-            marker.scale.y = 0.05
-            marker.scale.z = 0.1
-            marker.color.a = 1.0 # Don't forget to set the alpha!
+            length = 0.5
+            if not is_local:
+                marker.pose.position.x -= length/2.
+            marker.scale.x = 0.5 if is_local else 0.5
+            marker.scale.y = 0.5 if is_local else 0.05
+            marker.scale.z = 0.01 if is_local else 0.1
+            marker.color.a = 0.3 if is_local else 1.0 # Don't forget to set the alpha!
             marker.color.r = 0.0 if is_local else 1.0
             marker.color.g = 1.0 if is_local else 0.0
             marker.color.b = 0.0
