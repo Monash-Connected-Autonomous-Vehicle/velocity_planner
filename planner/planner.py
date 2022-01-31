@@ -17,7 +17,7 @@ class Planner(Node):
         self.waypoints_sub = self.create_subscription(WaypointArray,
             '/global_waypoints', self.waypoints_callback, 10)
         self.waypoints_sub  # prevent unused variable warning
-        self.waypoints_pub = self.create_publisher(WaypointArray, 'local_waypoints', 10)
+        self.waypoints_pub = self.create_publisher(WaypointArray, '~/local_waypoints', 10)
 
         self.local_wp_max_length = 40 # TODO: make ros param
 
