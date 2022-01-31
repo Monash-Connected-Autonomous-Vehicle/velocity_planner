@@ -1,4 +1,4 @@
-# 🧶 Planner
+# 🧶 Velocity Planner
 
 ## Inputs
 - current location (`geometry_msgs/Pose` on topic `/planner/current_pose`)
