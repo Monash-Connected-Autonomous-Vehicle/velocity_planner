@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'planner'
+package_name = 'velocity_planner'
 
 setup(
     name=package_name,
@@ -20,9 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'planner = planner.planner:main',
-            'fake_waypoints = planner.fake_waypoint_publisher:main',
-            'waypoint_visualiser = planner.waypoint_visualiser:main',
+            'velocity_planner = velocity_planner.velocity_planner:main',
+            'fake_waypoints = velocity_planner.fake_waypoint_publisher:main',
+            'waypoint_visualiser = velocity_planner.waypoint_visualiser:main',
         ],
     },
 )

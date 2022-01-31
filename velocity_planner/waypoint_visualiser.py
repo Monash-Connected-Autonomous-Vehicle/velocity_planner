@@ -12,7 +12,7 @@ class WaypointVisualiser(Node):
         self.global_sub = self.create_subscription(WaypointArray,
             'global_waypoints', self.global_callback, 10)
         self.global_sub = self.create_subscription(WaypointArray,
-            '/planner/local_waypoints', self.local_callback, 10)
+            '/velocity_planner/local_waypoints', self.local_callback, 10)
 
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
@@ -22,6 +22,7 @@ class WaypointVisualiser(Node):
 
     def local_callback(self, msg):
         self.publish_markers(msg.waypoints, 'local_waypoints')
+        print("received waypoints")
 
     def publish_markers(self, waypoints, namespace: str):
         is_local = namespace == 'local_waypoints'

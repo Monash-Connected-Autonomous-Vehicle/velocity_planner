@@ -5,10 +5,10 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from mcav_interfaces.msg import WaypointArray
 import numpy as np
 
-class Planner(Node):
+class VelocityPlanner(Node):
 
     def __init__(self):
-        super().__init__('planner')
+        super().__init__('velocity_planner')
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
         self.initial_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
@@ -53,7 +53,7 @@ class Planner(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    planner = Planner()
+    planner = VelocityPlanner()
     rclpy.spin(planner)
     planner.destroy_node()
     rclpy.shutdown()
