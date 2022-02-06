@@ -32,16 +32,16 @@ class WaypointVisualiser(Node):
             pose_marker.header.frame_id = waypoints[0].frame_id
             pose_marker.ns = namespace
             pose_marker.id = index
-            pose_marker.type = Marker.SPHERE if is_local else Marker.ARROW
+            pose_marker.type = Marker.SPHERE if is_local else Marker.CUBE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            length = 0.5
-            if not is_local:
-                pose_marker.pose.position.x -= length/2.
-            pose_marker.scale.x = 0.5 if is_local else 0.5
-            pose_marker.scale.y = 0.5 if is_local else 0.05
-            pose_marker.scale.z = 0.01 if is_local else 0.1
-            pose_marker.color.a = 0.3 if is_local else 1.0 # Don't forget to set the alpha!
+            # length = 0.5
+            # if not is_local:
+            #     pose_marker.pose.position.x -= length/2.
+            pose_marker.scale.x = 0.2 if is_local else 0.05
+            pose_marker.scale.y = 0.2 if is_local else 0.05
+            pose_marker.scale.z = 0.01 if is_local else 0.05
+            pose_marker.color.a = 0.5 if is_local else 1.0 # Don't forget to set the alpha!
             pose_marker.color.r = 0.0 if is_local else 1.0
             pose_marker.color.g = 1.0 if is_local else 0.0
             pose_marker.color.b = 0.0
@@ -59,10 +59,10 @@ class WaypointVisualiser(Node):
                 velocity_marker.scale.x = 0.5
                 velocity_marker.scale.y = 0.05
                 velocity_marker.scale.z = 0.1
-                velocity_marker.color.a = 1.0 # Don't forget to set the alpha!
-                velocity_marker.color.r = 1.0
+                velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
+                velocity_marker.color.r = 0.0
                 velocity_marker.color.g = 1.0
-                velocity_marker.color.b = 1.0
+                velocity_marker.color.b = 0.0
                 velocity_marker.text = str(waypoint.velocity.linear.x)
                 markers.append(velocity_marker)
 
