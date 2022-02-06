@@ -58,7 +58,7 @@ class WaypointVisualiser(Node):
             velocity_marker.scale.y = 0.05
             velocity_marker.scale.z = 0.1
             velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
-            velocity_marker.text = str(waypoint.velocity.linear.x)
+            velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
 
             # changes text colour according to fraction of max speed
             # green->red gradient for fast->slow
