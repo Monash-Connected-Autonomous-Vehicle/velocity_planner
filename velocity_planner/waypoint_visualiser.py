@@ -28,24 +28,44 @@ class WaypointVisualiser(Node):
         is_local = namespace == 'local_waypoints'
         markers = []
         for index, waypoint in enumerate(waypoints):
-            marker = Marker()
-            marker.header.frame_id = waypoints[0].frame_id
-            marker.ns = namespace
-            marker.id = index
-            marker.type = Marker.SPHERE if is_local else Marker.ARROW
-            marker.action = Marker.ADD
-            marker.pose = waypoint.pose
+            pose_marker = Marker()
+            pose_marker.header.frame_id = waypoints[0].frame_id
+            pose_marker.ns = namespace
+            pose_marker.id = index
+            pose_marker.type = Marker.SPHERE if is_local else Marker.ARROW
+            pose_marker.action = Marker.ADD
+            pose_marker.pose = waypoint.pose
             length = 0.5
             if not is_local:
-                marker.pose.position.x -= length/2.
-            marker.scale.x = 0.5 if is_local else 0.5
-            marker.scale.y = 0.5 if is_local else 0.05
-            marker.scale.z = 0.01 if is_local else 0.1
-            marker.color.a = 0.3 if is_local else 1.0 # Don't forget to set the alpha!
-            marker.color.r = 0.0 if is_local else 1.0
-            marker.color.g = 1.0 if is_local else 0.0
-            marker.color.b = 0.0
-            markers.append(marker)
+                pose_marker.pose.position.x -= length/2.
+            pose_marker.scale.x = 0.5 if is_local else 0.5
+            pose_marker.scale.y = 0.5 if is_local else 0.05
+            pose_marker.scale.z = 0.01 if is_local else 0.1
+            pose_marker.color.a = 0.3 if is_local else 1.0 # Don't forget to set the alpha!
+            pose_marker.color.r = 0.0 if is_local else 1.0
+            pose_marker.color.g = 1.0 if is_local else 0.0
+            pose_marker.color.b = 0.0
+            markers.append(pose_marker)
+
+            if is_local:
+                velocity_marker = Marker()
+                velocity_marker.header.frame_id = waypoints[0].frame_id
+                velocity_marker.ns = 'velocity'
+                velocity_marker.id = index
+                velocity_marker.type = Marker.TEXT_VIEW_FACING
+                velocity_marker.action = Marker.ADD
+                velocity_marker.pose.position.x = waypoint.pose.position.x
+                velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
+                velocity_marker.scale.x = 0.5
+                velocity_marker.scale.y = 0.05
+                velocity_marker.scale.z = 0.1
+                velocity_marker.color.a = 1.0 # Don't forget to set the alpha!
+                velocity_marker.color.r = 1.0
+                velocity_marker.color.g = 1.0
+                velocity_marker.color.b = 1.0
+                velocity_marker.text = str(waypoint.velocity.linear.x)
+                markers.append(velocity_marker)
+
         marker_array = MarkerArray()
         marker_array.markers = markers
 
