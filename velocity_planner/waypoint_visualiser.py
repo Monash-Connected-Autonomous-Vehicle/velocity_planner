@@ -17,63 +17,101 @@ class WaypointVisualiser(Node):
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
 
+        self.local_waypoints_length = 40 # TODO: make into parameter
+
     def global_callback(self, msg):
-        self.publish_markers(msg.waypoints, 'global_waypoints')
+        self.publish_global(msg.waypoints)
 
     def local_callback(self, msg):
-        self.publish_markers(msg.waypoints, 'local_waypoints')
-        print("received waypoints")
+        self.publish_local(msg.waypoints)
 
-    def publish_markers(self, waypoints, namespace: str):
-        is_local = namespace == 'local_waypoints'
+    def publish_local(self, waypoints):
         markers = []
         for index, waypoint in enumerate(waypoints):
             pose_marker = Marker()
             pose_marker.header.frame_id = waypoints[0].frame_id
-            pose_marker.ns = namespace
+            pose_marker.ns = 'local_waypoints'
             pose_marker.id = index
-            pose_marker.type = Marker.SPHERE if is_local else Marker.CUBE
+            pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            # length = 0.5
-            # if not is_local:
-            #     pose_marker.pose.position.x -= length/2.
-            pose_marker.scale.x = 0.2 if is_local else 0.05
-            pose_marker.scale.y = 0.2 if is_local else 0.05
-            pose_marker.scale.z = 0.01 if is_local else 0.05
-            pose_marker.color.a = 0.5 if is_local else 1.0 # Don't forget to set the alpha!
-            pose_marker.color.r = 0.0 if is_local else 1.0
-            pose_marker.color.g = 1.0 if is_local else 0.0
+            pose_marker.scale.x = 0.2
+            pose_marker.scale.y = 0.2
+            pose_marker.scale.z = 0.01
+            top_speed = 5.5
+            pose_marker.color.a = 0.5 # Don't forget to set the alpha!
+            pose_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
+            pose_marker.color.g = waypoint.velocity.linear.x/top_speed
             pose_marker.color.b = 0.0
+
             markers.append(pose_marker)
 
-            if is_local:
-                velocity_marker = Marker()
-                velocity_marker.header.frame_id = waypoints[0].frame_id
-                velocity_marker.ns = 'velocity'
-                velocity_marker.id = index
-                velocity_marker.type = Marker.TEXT_VIEW_FACING
-                velocity_marker.action = Marker.ADD
-                velocity_marker.pose.position.x = waypoint.pose.position.x
-                velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
-                velocity_marker.scale.x = 0.5
-                velocity_marker.scale.y = 0.05
-                velocity_marker.scale.z = 0.1
-                velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
-                velocity_marker.color.r = 0.0
-                velocity_marker.color.g = 1.0
-                velocity_marker.color.b = 0.0
-                velocity_marker.text = str(waypoint.velocity.linear.x)
-                markers.append(velocity_marker)
+            velocity_marker = Marker()
+            velocity_marker.header.frame_id = waypoints[0].frame_id
+            velocity_marker.ns = 'velocity'
+            velocity_marker.id = index
+            velocity_marker.type = Marker.TEXT_VIEW_FACING
+            velocity_marker.action = Marker.ADD
+            velocity_marker.pose.position.x = waypoint.pose.position.x
+            velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
+            velocity_marker.scale.x = 0.5
+            velocity_marker.scale.y = 0.05
+            velocity_marker.scale.z = 0.1
+            velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
+            velocity_marker.text = str(waypoint.velocity.linear.x)
+
+            # changes text colour according to fraction of max speed
+            # green->red gradient for fast->slow
+            top_speed = 5.5
+            velocity_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
+            velocity_marker.color.g = 1.0*(waypoint.velocity.linear.x/top_speed)
+            velocity_marker.color.b = 0.0
+
+            markers.append(velocity_marker)
+
+        # Remove extra markers
+        for index in range(len(waypoints), self.local_waypoints_length):
+            marker = Marker()
+            marker.header.frame_id = waypoints[0].frame_id
+            marker.ns = 'local_waypoints'
+            marker.id = index
+            marker.action = Marker.DELETE
+            markers.append(marker)
+        for index in range(len(waypoints), self.local_waypoints_length):
+            marker = Marker()
+            marker.header.frame_id = waypoints[0].frame_id
+            marker.ns = 'velocity'
+            marker.id = index
+            marker.action = Marker.DELETE
+            markers.append(marker)
 
         marker_array = MarkerArray()
         marker_array.markers = markers
+        self.local_vis_pub_.publish(marker_array)
 
-        if namespace == 'local_waypoints':
-            self.local_vis_pub_.publish(marker_array)
-        else:
-            self.vis_pub_.publish(marker_array)
+    def publish_global(self, waypoints):
+        markers = []
+        for index, waypoint in enumerate(waypoints):
+            pose_marker = Marker()
+            pose_marker.header.frame_id = waypoints[0].frame_id
+            pose_marker.ns = 'global_waypoints'
+            pose_marker.id = index
+            pose_marker.type = Marker.CUBE
+            pose_marker.action = Marker.ADD
+            pose_marker.pose = waypoint.pose
+            pose_marker.scale.x = 0.05
+            pose_marker.scale.y = 0.05
+            pose_marker.scale.z = 0.05
+            pose_marker.color.a = 1.0 # Don't forget to set the alpha!
+            pose_marker.color.r = 1.0
+            pose_marker.color.g = 1.0
+            pose_marker.color.b = 0.0
 
+            markers.append(pose_marker)
+
+        marker_array = MarkerArray()
+        marker_array.markers = markers
+        self.vis_pub_.publish(marker_array)
 
 def main(args=None):
     rclpy.init(args=args)
