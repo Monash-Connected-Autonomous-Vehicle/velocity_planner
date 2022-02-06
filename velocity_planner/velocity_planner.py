@@ -4,6 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from mcav_interfaces.msg import WaypointArray
 import numpy as np
+import math
 
 class VelocityPlanner(Node):
 
@@ -40,12 +41,26 @@ class VelocityPlanner(Node):
         dist_2 = np.einsum('ij,ij->i', deltas, deltas)
         return np.argmin(dist_2)
 
+    def slow_to_stop(self, waypoints, stopping_index):
+        main_speed = max(wp.velocity.linear.x for wp in waypoints)
+        max_accel = 0.5 # m/s/waypoint
+        slowing_wp_count = math.ceil(main_speed / max_accel)
+
+        slowed_waypoints = waypoints.copy()
+
+        for i in range(stopping_index, stopping_index-slowing_wp_count, -1):
+            curr_speed = (stopping_index - i)*max_accel
+            slowed_waypoints[i].velocity.linear.x = curr_speed
+
+        return slowed_waypoints
+
     def spin(self):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
             nearest_index = self.find_nearest_waypoint()
             max_index = min(len(self.global_waypoints)-1, nearest_index + self.local_wp_max_length)
             if max_index != nearest_index:
                 local_waypoints = self.global_waypoints[nearest_index:max_index]
+                local_waypoints = self.slow_to_stop(local_waypoints, len(local_waypoints)-1)
                 local_wp_msg = WaypointArray()
                 local_wp_msg.waypoints = local_waypoints
                 self.waypoints_pub.publish(local_wp_msg)
