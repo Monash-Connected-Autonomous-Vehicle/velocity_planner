@@ -57,9 +57,10 @@ class VelocityPlanner(Node):
     def spin(self):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
             nearest_index = self.find_nearest_waypoint()
-            max_index = min(len(self.global_waypoints)-1, nearest_index + self.local_wp_max_length)
+            max_index = min(len(self.global_waypoints)-1, nearest_index + self.local_wp_max_length - 1)
             if max_index != nearest_index:
-                local_waypoints = self.global_waypoints[nearest_index:max_index]
+                local_waypoints = self.global_waypoints[nearest_index:max_index+1]
+                print(len(local_waypoints))
                 local_waypoints = self.slow_to_stop(local_waypoints, len(local_waypoints)-1)
                 local_wp_msg = WaypointArray()
                 local_wp_msg.waypoints = local_waypoints
