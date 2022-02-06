@@ -27,7 +27,7 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 - Array of upcoming waypoints beginning at the point closest to the vehicle (`mcav_interfaces/msg/WaypointArray` on topic `/planner/local_waypoints`)
 ### Run the planner
 - `cd ~/colcon_ws && . install/setup.bash`
-- `ros2 run velocity_planner velocity_planner`
+- `ros2 launch velocity_planner velocity_planner.launch.py`
 
 ### Visualise global and local waypoints
 - `ros2 run velocity_planner waypoint_visualiser`
