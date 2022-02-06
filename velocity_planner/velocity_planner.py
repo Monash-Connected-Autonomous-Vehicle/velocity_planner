@@ -20,7 +20,7 @@ class VelocityPlanner(Node):
         self.waypoints_sub  # prevent unused variable warning
         self.waypoints_pub = self.create_publisher(WaypointArray, '~/local_waypoints', 10)
 
-        self.local_wp_max_length = 40 # TODO: make ros param
+        self.local_wp_max_length = 20 # TODO: make ros param
 
         self.position = np.array([])
         self.global_waypoints = []
@@ -28,7 +28,6 @@ class VelocityPlanner(Node):
 
     def initial_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
         self.position = np.array([pose_msg.pose.pose.position.x, pose_msg.pose.pose.position.y])
-        self.get_logger().info('Received: "%s"' % pose_msg.pose.pose)
 
     def waypoints_callback(self, msg: WaypointArray):
         # TODO: transform so that they can be in different coordinate systems
@@ -43,8 +42,8 @@ class VelocityPlanner(Node):
 
     def slow_to_stop(self, waypoints, stopping_index):
         main_speed = max(wp.velocity.linear.x for wp in waypoints)
-        max_accel = 0.5 # m/s/waypoint
-        slowing_wp_count = math.ceil(main_speed / max_accel)
+        max_accel = 0.5 # m/s/waypoint # TODO: make param
+        slowing_wp_count = min(math.ceil(main_speed / max_accel), len(waypoints))
 
         slowed_waypoints = waypoints.copy()
 
@@ -57,15 +56,18 @@ class VelocityPlanner(Node):
     def spin(self):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
             nearest_index = self.find_nearest_waypoint()
-            max_index = min(len(self.global_waypoints)-1, nearest_index + self.local_wp_max_length - 1)
-            if max_index != nearest_index:
-                local_waypoints = self.global_waypoints[nearest_index:max_index+1]
-                print(len(local_waypoints))
-                local_waypoints = self.slow_to_stop(local_waypoints, len(local_waypoints)-1)
-                local_wp_msg = WaypointArray()
-                local_wp_msg.waypoints = local_waypoints
-                self.waypoints_pub.publish(local_wp_msg)
 
+            # Extract up to local_wp_max_length waypoints as the local plan
+            max_index = min(len(self.global_waypoints)-1, nearest_index + self.local_wp_max_length - 1)
+            local_waypoints = self.global_waypoints[nearest_index:max_index+1]
+
+            # Stop at the end of the global waypoints
+            if nearest_index + self.local_wp_max_length > len(self.global_waypoints):
+                local_waypoints = self.slow_to_stop(local_waypoints, len(local_waypoints)-1)
+
+            local_wp_msg = WaypointArray()
+            local_wp_msg.waypoints = local_waypoints
+            self.waypoints_pub.publish(local_wp_msg)
 
 def main(args=None):
     rclpy.init(args=args)
