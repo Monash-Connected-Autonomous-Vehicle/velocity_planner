@@ -34,4 +34,4 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 - `rviz2 -d planner.rviz`
 
 ### Test using fake global waypoints
-- `ros2 run velocity_planner fake_waypoint_publisher`
+- `ros2 run velocity_planner fake_waypoint`
