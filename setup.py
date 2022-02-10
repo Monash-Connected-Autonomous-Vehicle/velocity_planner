@@ -24,7 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'velocity_planner = velocity_planner.velocity_planner:main',
-            'fake_waypoints = velocity_planner.fake_waypoint_publisher:main',
+            'fake_waypoints = velocity_planner.fake_waypoint:main',
             'waypoint_visualiser = velocity_planner.waypoint_visualiser:main',
         ],
     },
