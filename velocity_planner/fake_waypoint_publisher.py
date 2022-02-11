@@ -7,7 +7,7 @@ from mcav_interfaces.msg import Waypoint, WaypointArray
 class FakeWaypoints(Node):
 
     def __init__(self):
-        super().__init__('fake_waypoints')
+        super().__init__('fake_waypoint_publisher')
         self.publisher_ = self.create_publisher(WaypointArray, 'global_waypoints', 10)
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -36,9 +36,9 @@ class FakeWaypoints(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    fake_waypoints = FakeWaypoints()
-    rclpy.spin(fake_waypoints)
-    fake_waypoints.destroy_node()
+    fake_waypoint_publisher = FakeWaypoints()
+    rclpy.spin(fake_waypoint_publisher)
+    fake_waypoint_publisher.destroy_node()
     rclpy.shutdown()
 
 
