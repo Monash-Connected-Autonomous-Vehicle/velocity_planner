@@ -58,14 +58,14 @@ class VelocityPlanner(Node):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
             nearest_index = self.find_nearest_waypoint()
 
+            # Stop at the end of the global waypoints
+            slowed_global = self.slow_to_stop(self.global_waypoints, len(self.global_waypoints)-1)
+
             # Extract up to local_plan_max_length waypoints as the local plan
             local_plan_max_length = self.get_parameter('local_plan_max_length').get_parameter_value().integer_value
             final_wp_index = min(len(self.global_waypoints)-1, nearest_index + local_plan_max_length - 1)
-            local_waypoints = self.global_waypoints[nearest_index:final_wp_index+1]
+            local_waypoints = slowed_global[nearest_index:final_wp_index+1]
 
-            # Stop at the end of the global waypoints
-            if nearest_index + local_plan_max_length > len(self.global_waypoints):
-                local_waypoints = self.slow_to_stop(local_waypoints, len(local_waypoints)-1)
 
             local_wp_msg = WaypointArray()
             local_wp_msg.waypoints = local_waypoints
