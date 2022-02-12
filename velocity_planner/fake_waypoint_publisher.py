@@ -13,11 +13,13 @@ class FakeWaypoints(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.waypoints = []
         self.init_waypoints()
+        self.get_logger().info('Publishing "%d" waypoints' % len(self.waypoints))
 
     def init_waypoints(self):
         """ Modifies self.waypoints """
         x = np.arange(0.0, 5.0, 0.1)
-        y = np.sin(x)
+        # y = np.sin(x)
+        y = np.zeros(len(x))
 
         for i in range(len(x)):
             waypoint = Waypoint()
@@ -31,7 +33,7 @@ class FakeWaypoints(Node):
         msg = WaypointArray()
         msg.waypoints = self.waypoints
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing "%d" waypoints' % len(msg.waypoints))
+
 
 def main(args=None):
     rclpy.init(args=args)

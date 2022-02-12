@@ -25,9 +25,9 @@ class VelocityPlanner(Node):
         self.objects_sub  # prevent unused variable warning
         self.waypoints_pub = self.create_publisher(WaypointArray, '~/local_waypoints', 10)
 
-        self.declare_parameter('local_plan_max_length', 20) # number of waypoints to plan ahead
+        self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
-        self.declare_parameter('obj_waypoint_distance_threshold', 0.6) # if an object is within this distance of a path,
+        self.declare_parameter('obj_waypoint_distance_threshold', 0.4) # if an object is within this distance of a path,
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
 
@@ -82,7 +82,6 @@ class VelocityPlanner(Node):
                 wp_x_axis = qv_mult(wp_quat, x_axis)
                 # Check that they point the same direction (i.e. dot product is positive)
                 dot_prod = np.dot(np.array(wp_x_axis[0:2]), np.array(wp_obj_vec))
-                self.get_logger().info(f'{wp_obj_vec} {dot_prod}')
                 if dot_prod >= 0:
                     stopping_index = max(nearest_wp-stopping_wp_count, 0)
                     stopping_indices.append(stopping_index)
