@@ -5,6 +5,8 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from mcav_interfaces.msg import WaypointArray, DetectedObjectArray
 import numpy as np
 import math
+import tf2_ros
+from velocity_planner.vector_ops import q_normalise, qv_mult
 
 class VelocityPlanner(Node):
 
@@ -29,6 +31,10 @@ class VelocityPlanner(Node):
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
 
+        # Initialise tf buffer and listener
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+
         self.position = np.array([])
         self.global_waypoints = []
         self.global_wp_coords = np.array([])
@@ -47,13 +53,16 @@ class VelocityPlanner(Node):
 
     def find_nearest_waypoint(self, waypoint_coords, position) -> int:
         """ Inputs: position 1x2 numpy array [x, y] """
-        # algorithm from https://codereview.stackexchange.com/a/28210
+        # Algorithm from https://codereview.stackexchange.com/a/28210
         deltas = waypoint_coords - position
         dist_2 = np.einsum('ij,ij->i', deltas, deltas)
         return np.argmin(dist_2)
 
-    def find_object_waypoints(self, waypoint_coords):
-        # TODO: only if object is in front, not behind
+    def find_object_waypoints(self, waypoints):
+        """ Checks if path is blocked by an object. Path is considered blocked if the closest waypoint
+        on the path to an object is within a distance threshold, and the object is in front of that waypoint,
+        not behind. """
+        waypoint_coords = np.array([(wp.pose.position.x, wp.pose.position.y) for wp in waypoints])
         stopping_indices = []
         distance_threshold = self.get_parameter('obj_waypoint_distance_threshold').get_parameter_value().double_value
         stopping_wp_count = self.get_parameter('obj_stopping_waypoint_count').get_parameter_value().integer_value
@@ -61,25 +70,41 @@ class VelocityPlanner(Node):
         for obj in self.objects:
             position = np.array([obj.pose.position.x, obj.pose.position.y])
             nearest_wp = self.find_nearest_waypoint(waypoint_coords, position)
-            distance_to_path = np.linalg.norm(waypoint_coords[nearest_wp, :] - position)
+            wp_obj_vec = position - waypoint_coords[nearest_wp, :]
+            distance_to_path = np.linalg.norm(wp_obj_vec)
             if distance_to_path < distance_threshold:
-                stopping_index = max(nearest_wp-stopping_wp_count, 0)
-                stopping_indices.append(stopping_index)
+                # Check that object is in front of and not behind the nearest waypoint
+                # Get vector of direction of the wp
+                x_axis = (1.0, 0.0, 0.0)
+                wp_quat = waypoints[nearest_wp].pose.orientation
+                wp_quat = (wp_quat.w, wp_quat.x, wp_quat.y, wp_quat.z)
+                wp_quat = q_normalise(wp_quat)
+                wp_x_axis = qv_mult(wp_quat, x_axis)
+                # Check that they point the same direction (i.e. dot product is positive)
+                dot_prod = np.dot(np.array(wp_x_axis[0:2]), np.array(wp_obj_vec))
+                self.get_logger().info(f'{wp_obj_vec} {dot_prod}')
+                if dot_prod >= 0:
+                    stopping_index = max(nearest_wp-stopping_wp_count, 0)
+                    stopping_indices.append(stopping_index)
 
         return stopping_indices
 
     def slow_to_stop(self, waypoints, stopping_index):
         main_speed = max(wp.velocity.linear.x for wp in waypoints)
         max_accel = self.get_parameter('max_acceleration').get_parameter_value().double_value
+
+        # Gradually slow to a stop with constant deceleration before the stopping waypoint
         slowing_wp_count = min(math.ceil(main_speed / max_accel), len(waypoints))
-
         slowed_waypoints = waypoints.copy()
-
         slowing_indices = range(stopping_index, max(-1, stopping_index-slowing_wp_count), -1)
         for i in slowing_indices:
             curr_speed = slowed_waypoints[i].velocity.linear.x
             slower_speed = (stopping_index - i)*max_accel
             slowed_waypoints[i].velocity.linear.x = min(slower_speed, curr_speed, main_speed)
+        
+        # Zero everything past the stopping waypoint
+        for i in range(stopping_index, len(slowed_waypoints)):
+            slowed_waypoints[i].velocity.linear.x = 0.0
 
         return slowed_waypoints
 
@@ -95,11 +120,10 @@ class VelocityPlanner(Node):
             final_wp_index = min(len(self.global_waypoints)-1, nearest_index + local_plan_max_length - 1)
             local_waypoints = slowed_global[nearest_index:final_wp_index+1]
 
-            # Stop for detected objects
-            local_waypoint_coords = np.array([(wp.pose.position.x, wp.pose.position.y) for wp in local_waypoints])
-            stopping_indices = self.find_object_waypoints(local_waypoint_coords)
-            for wp_index in stopping_indices:
-                local_waypoints = self.slow_to_stop(local_waypoints, wp_index)
+            # Stop for the first detected object that blocks path
+            stopping_indices = self.find_object_waypoints(local_waypoints)
+            if len(stopping_indices) > 0:
+                local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
 
             local_wp_msg = WaypointArray()
             local_wp_msg.waypoints = local_waypoints
