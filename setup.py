@@ -25,7 +25,9 @@ setup(
         'console_scripts': [
             'velocity_planner = velocity_planner.velocity_planner:main',
             'fake_waypoint_publisher = velocity_planner.fake_waypoint_publisher:main',
+            'fake_object_publisher = velocity_planner.fake_object_publisher:main',
             'waypoint_visualiser = velocity_planner.waypoint_visualiser:main',
+            'object_visualiser = velocity_planner.object_visualiser:main',
         ],
     },
 )

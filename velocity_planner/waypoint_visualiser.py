@@ -109,6 +109,29 @@ class WaypointVisualiser(Node):
 
             markers.append(pose_marker)
 
+            velocity_marker = Marker()
+            velocity_marker.header.frame_id = waypoints[0].frame_id
+            velocity_marker.ns = 'velocity'
+            velocity_marker.id = index
+            velocity_marker.type = Marker.TEXT_VIEW_FACING
+            velocity_marker.action = Marker.ADD
+            velocity_marker.pose.position.x = waypoint.pose.position.x
+            velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
+            velocity_marker.scale.x = 0.5
+            velocity_marker.scale.y = 0.05
+            velocity_marker.scale.z = 0.1
+            velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
+            velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
+
+            # changes text colour according to fraction of max speed
+            # green->red gradient for fast->slow
+            top_speed = 5.5
+            velocity_marker.color.r = 1.0
+            velocity_marker.color.g = 1.0
+            velocity_marker.color.b = 0.0
+
+            markers.append(velocity_marker)
+
         marker_array = MarkerArray()
         marker_array.markers = markers
         self.vis_pub_.publish(marker_array)
