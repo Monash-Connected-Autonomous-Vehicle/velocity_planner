@@ -35,3 +35,9 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 
 ### Test using fake global waypoints
 - `ros2 run velocity_planner fake_waypoint_publisher`
+
+## Example run 
+Shows planner stopping for a detected object
+
+https://user-images.githubusercontent.com/7232997/153693042-92fc1265-6817-4bae-8867-90b4cb17fd1c.mov
+
