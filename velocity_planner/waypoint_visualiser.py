@@ -35,8 +35,8 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.2
-            pose_marker.scale.y = 0.2
+            pose_marker.scale.x = 0.4
+            pose_marker.scale.y = 0.4
             pose_marker.scale.z = 0.01
             top_speed = 5.5
             pose_marker.color.a = 0.5 # Don't forget to set the alpha!
@@ -99,9 +99,9 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.CUBE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.05
-            pose_marker.scale.y = 0.05
-            pose_marker.scale.z = 0.05
+            pose_marker.scale.x = 0.1
+            pose_marker.scale.y = 0.1
+            pose_marker.scale.z = 0.1
             pose_marker.color.a = 1.0 # Don't forget to set the alpha!
             pose_marker.color.r = 1.0
             pose_marker.color.g = 1.0
