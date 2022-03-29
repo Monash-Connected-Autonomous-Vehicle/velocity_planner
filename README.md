@@ -36,6 +36,9 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 ### Test using fake global waypoints
 - `ros2 run velocity_planner fake_waypoint_publisher`
 
+### Test using waypoints from a csv file
+- `ros2 run velocity_planner waypoint_reader town01_small_waypoints.csv`
+
 ## Example run 
 Shows planner stopping for a detected object
 
