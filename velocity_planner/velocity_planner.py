@@ -15,7 +15,7 @@ class VelocityPlanner(Node):
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
         self.initial_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
-            '/initialpose', self.initial_pose_callback, 10)
+            '/current_pose', self.initial_pose_callback, 10)
         self.initial_pose_sub  # prevent unused variable warning
         self.waypoints_sub = self.create_subscription(WaypointArray,
             '/global_waypoints', self.waypoints_callback, 10)
