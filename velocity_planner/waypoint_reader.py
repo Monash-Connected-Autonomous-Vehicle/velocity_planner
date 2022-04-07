@@ -27,7 +27,7 @@ class WaypointReader(Node):
                     waypoint = Waypoint()
                     waypoint.frame_id = 'map'
                     waypoint.pose.position.x = float(row['x'])
-                    waypoint.pose.position.y = float(row['y'])
+                    waypoint.pose.position.y = -float(row['y'])
                     waypoint.velocity.linear.x = float(row['velocity']) # m/s
                     self.waypoints.append(waypoint)
         except Exception as e:
