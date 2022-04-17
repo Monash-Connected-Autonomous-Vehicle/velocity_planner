@@ -35,8 +35,8 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.4
-            pose_marker.scale.y = 0.4
+            pose_marker.scale.x = 2.0
+            pose_marker.scale.y = 2.0
             pose_marker.scale.z = 0.01
             top_speed = 5.5
             pose_marker.color.a = 0.5 # Don't forget to set the alpha!
@@ -54,8 +54,8 @@ class WaypointVisualiser(Node):
             velocity_marker.action = Marker.ADD
             velocity_marker.pose.position.x = waypoint.pose.position.x
             velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
-            velocity_marker.scale.x = 0.5
-            velocity_marker.scale.y = 0.05
+            velocity_marker.scale.x = 2.0
+            velocity_marker.scale.y = 2.0
             velocity_marker.scale.z = 0.1
             velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
@@ -99,8 +99,8 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.CUBE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.1
-            pose_marker.scale.y = 0.1
+            pose_marker.scale.x = 0.8
+            pose_marker.scale.y = 0.8
             pose_marker.scale.z = 0.1
             pose_marker.color.a = 1.0 # Don't forget to set the alpha!
             pose_marker.color.r = 1.0
@@ -117,8 +117,8 @@ class WaypointVisualiser(Node):
             velocity_marker.action = Marker.ADD
             velocity_marker.pose.position.x = waypoint.pose.position.x
             velocity_marker.pose.position.y = waypoint.pose.position.y + 0.2
-            velocity_marker.scale.x = 0.5
-            velocity_marker.scale.y = 0.05
+            velocity_marker.scale.x = 0.8
+            velocity_marker.scale.y = 0.8
             velocity_marker.scale.z = 0.1
             velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
