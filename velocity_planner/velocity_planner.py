@@ -27,7 +27,7 @@ class VelocityPlanner(Node):
         self.waypoints_map_pub = self.create_publisher(WaypointArray, 'local_map_waypoints', 10)
         
 
-        self.declare_parameter('max_velocity', 3.0) # maximum waypoint velocity in m/s
+        self.declare_parameter('max_velocity', 7.8) # maximum waypoint velocity in m/s
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
         self.declare_parameter('obj_waypoint_distance_threshold', 0.4) # if an object is within this distance of a path,
@@ -155,9 +155,9 @@ class VelocityPlanner(Node):
             nearest_index = self.find_nearest_waypoint(self.global_wp_coords, self.position)
 
             # Speed cap
-            capped_global = self.speed_cap(self.global_waypoints)
+            # self.global_waypoints = self.speed_cap(self.global_waypoints)
             # Stop at the end of the global waypoints
-            slowed_global = self.slow_to_stop(capped_global, len(self.global_waypoints)-1)
+            slowed_global = self.slow_to_stop(self.global_waypoints, len(self.global_waypoints)-1)
             # Extract up to local_plan_max_length waypoints as the local plan
             local_plan_max_length = self.get_parameter('local_plan_max_length').get_parameter_value().integer_value
             final_wp_index = min(len(self.global_waypoints)-1, nearest_index + local_plan_max_length - 1)
