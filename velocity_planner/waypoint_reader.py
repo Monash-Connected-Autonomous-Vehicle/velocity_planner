@@ -8,13 +8,15 @@ from mcav_interfaces.msg import Waypoint, WaypointArray
 
 class WaypointReader(Node):
 
-    def __init__(self, waypoint_filename):
+    def __init__(self):
         super().__init__('waypoint_reader')
         self.publisher_ = self.create_publisher(WaypointArray, 'global_waypoints', 10)
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.waypoints = []
-        self.init_waypoints(waypoint_filename)
+        self.declare_parameter('waypoint_filename', "src/velocity_planner/town01_small_waypoints.csv")
+        wp_filename = self.get_parameter('waypoint_filename').get_parameter_value().string_value
+        self.init_waypoints(wp_filename)
         self.get_logger().info('Publishing "%d" waypoints' % len(self.waypoints))
 
     def init_waypoints(self, waypoint_filename):
@@ -44,12 +46,7 @@ class WaypointReader(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    if len(sys.argv) != 2:
-        print("Error. Syntax is: waypoint_reader <waypoint_file.csv>")
-        rclpy.shutdown()
-        sys.exit()
-
-    waypoint_reader = WaypointReader(sys.argv[1])
+    waypoint_reader = WaypointReader()
     rclpy.spin(waypoint_reader)
     waypoint_reader.destroy_node()
     rclpy.shutdown()
