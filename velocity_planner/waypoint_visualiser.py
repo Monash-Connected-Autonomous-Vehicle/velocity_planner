@@ -12,7 +12,7 @@ class WaypointVisualiser(Node):
         self.global_sub = self.create_subscription(WaypointArray,
             'global_waypoints', self.global_callback, 10)
         self.global_sub = self.create_subscription(WaypointArray,
-            'local_map_waypoints', self.local_callback, 10)
+            'local_baselink_waypoints', self.local_callback, 10)
 
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
