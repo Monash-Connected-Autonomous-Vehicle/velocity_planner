@@ -3,6 +3,8 @@ import rclpy
 from rclpy.node import Node
 import sys
 import csv
+from ament_index_python.packages import get_package_share_directory
+import os
 
 from mcav_interfaces.msg import Waypoint, WaypointArray
 
@@ -14,28 +16,25 @@ class WaypointReader(Node):
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.waypoints = []
-        self.declare_parameter('waypoint_filename', "src/velocity_planner/town01_small_waypoints.csv")
+        self.declare_parameter('waypoint_filename', "town01_path.csv")
         wp_filename = self.get_parameter('waypoint_filename').get_parameter_value().string_value
         self.init_waypoints(wp_filename)
         self.get_logger().info('Publishing "%d" waypoints' % len(self.waypoints))
 
     def init_waypoints(self, waypoint_filename):
         """ Reads in waypoints from the given csv file and stores them """
-        try:
-            with open(waypoint_filename) as csvfile:
-                csv_reader = csv.DictReader(csvfile, delimiter=',')
+        paths_csv_directory = os.path.join(get_package_share_directory('velocity_planner'))
 
-                for row in csv_reader:
-                    waypoint = Waypoint()
-                    waypoint.frame_id = 'map'
-                    waypoint.pose.position.x = float(row['x'])
-                    waypoint.pose.position.y = float(row['y'])
-                    waypoint.velocity.linear.x = float(row['velocity']) # m/s
-                    self.waypoints.append(waypoint)
-        except Exception as e:
-            print("Unable to read csv file: ")
-            print(e)
-            sys.exit()
+        with open(os.path.join(paths_csv_directory, waypoint_filename)) as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',')
+
+            for row in csv_reader:
+                waypoint = Waypoint()
+                waypoint.frame_id = 'map'
+                waypoint.pose.position.x = float(row['x'])
+                waypoint.pose.position.y = float(row['y'])
+                waypoint.velocity.linear.x = float(row['velocity']) # m/s
+                self.waypoints.append(waypoint)
 
     def timer_callback(self):
         msg = WaypointArray()
