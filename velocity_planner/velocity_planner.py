@@ -1,4 +1,6 @@
+from tarfile import LENGTH_NAME
 import rclpy
+import logging
 from rclpy.node import Node
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -8,10 +10,13 @@ import math
 import tf2_ros
 from velocity_planner.vector_ops import q_normalise, qv_mult
 
+
 class VelocityPlanner(Node):
 
     def __init__(self):
         super().__init__('velocity_planner')
+
+        # Subscriber
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
         self.initial_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
@@ -23,14 +28,17 @@ class VelocityPlanner(Node):
         self.objects_sub = self.create_subscription(DetectedObjectArray,
             'detected_objects', self.objects_callback, 10)
         self.objects_sub  # prevent unused variable warning
-        self.waypoints_pub = self.create_publisher(WaypointArray, 'local_baselink_waypoints', 10)
-        self.waypoints_map_pub = self.create_publisher(WaypointArray, 'local_map_waypoints', 10)
+
+        # Publisher
+        self.global_wp_bl_pub = self.create_publisher(WaypointArray, 'global_baselink_waypoints', 10)
+        self.local_wp_bl_pub = self.create_publisher(WaypointArray, 'local_baselink_waypoints', 10)
+        self.local_wp_map_pub = self.create_publisher(WaypointArray, 'local_map_waypoints', 10)
         
 
-        self.declare_parameter('max_velocity', 7.8) # maximum waypoint velocity in m/s
+        self.declare_parameter('max_velocity', 5.6) # maximum waypoint velocity used for speed capping
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
-        self.declare_parameter('obj_waypoint_distance_threshold', 0.4) # if an object is within this distance of a path,
+        self.declare_parameter('obj_waypoint_distance_threshold', 1.5) # if an object is within this distance of a path,
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
 
@@ -43,6 +51,8 @@ class VelocityPlanner(Node):
         self.global_waypoints = []
         self.global_wp_coords = np.array([])
         self.objects = []
+        
+        self.get_logger().set_level(logging.DEBUG)
 
 
     def initial_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
@@ -81,20 +91,13 @@ class VelocityPlanner(Node):
             position = np.array([obj.pose.position.x, obj.pose.position.y])
             nearest_wp = self.find_nearest_waypoint(waypoint_coords, position)
             wp_obj_vec = position - waypoint_coords[nearest_wp, :]
+
+            #self.get_logger().info(f" obj {obj.object_id} wp_vec {wp_obj_vec} pos {position} clusters.")
             distance_to_path = np.linalg.norm(wp_obj_vec)
+            #self.get_logger().info(f"d2p {distance_to_path}")
             if distance_to_path < distance_threshold:
-                # Check that object is in front of and not behind the nearest waypoint
-                # Get vector of direction of the wp
-                x_axis = (1.0, 0.0, 0.0)
-                wp_quat = waypoints[nearest_wp].pose.orientation
-                wp_quat = (wp_quat.w, wp_quat.x, wp_quat.y, wp_quat.z)
-                wp_quat = q_normalise(wp_quat)
-                wp_x_axis = qv_mult(wp_quat, x_axis)
-                # Check that they point the same direction (i.e. dot product is positive)
-                dot_prod = np.dot(np.array(wp_x_axis[0:2]), np.array(wp_obj_vec))
-                if dot_prod >= 0:
-                    stopping_index = max(nearest_wp-stopping_wp_count, 0)
-                    stopping_indices.append(stopping_index)
+                stopping_index = max(nearest_wp-stopping_wp_count, 0)
+                stopping_indices.append(stopping_index)
 
         return stopping_indices
 
@@ -119,12 +122,38 @@ class VelocityPlanner(Node):
         return slowed_waypoints
 
 
+    def slow_at_curve(self, waypoints):
+        """ Regulates velocity of waypoints at curves """
+        mu = 0.2 
+        g = 9.81
+        slowed_waypoints = waypoints.copy()
+        wp_coords = np.array([(wp.pose.position.x, wp.pose.position.y) for wp in waypoints])
+        vel_cap = self.get_parameter('max_velocity').get_parameter_value().double_value # global velocity cap
+        vel_max = vel_cap
+        
+        for i in range(len(waypoints) - 2):
+            len_b = np.linalg.norm(wp_coords[i] - wp_coords[i+1])
+            len_a = np.linalg.norm(wp_coords[i] - wp_coords[i+2])
+            len_c = np.linalg.norm(wp_coords[i+1] - wp_coords[i+2])
+            thet_bac = math.acos((len_b**2 + len_c**2 - len_a**2)/(2*len_b*len_c)) # cos rule
+            curve = 2*math.sin(thet_bac)/len_a # Menger curvature
+            vel_flipped = max(1.0/vel_cap, math.sqrt(curve/(mu*g))) # limiting maximum possible curve velocity to avoid exploding numbers
+            vel_max = min(vel_max, 1.0/vel_flipped) # local maximum velocity given curvature of waypoints
+
+        for wp in slowed_waypoints:
+            wp.velocity.linear.x = min(vel_max, wp.velocity.linear.x)
+            # print(vel_max)
+
+        return slowed_waypoints
+
+
     def speed_cap(self, waypoints):
+        """ Failsafe to cap the speed of the car """
         capped_waypoints = waypoints.copy()
+        max_velocity = self.get_parameter('max_velocity').get_parameter_value().double_value
+
         for wp in capped_waypoints:
-            max_velocity = self.get_parameter('max_velocity').get_parameter_value().double_value
-            wp.velocity.linear.x = (max_velocity if wp.velocity.linear.x > max_velocity 
-                         else wp.velocity.linear.x) # Velocity cap for pure pursuit
+            wp.velocity.linear.x = min(max_velocity, wp.velocity.linear.x) # Velocity cap for pure pursuit
                          
         return capped_waypoints
 
@@ -132,48 +161,60 @@ class VelocityPlanner(Node):
     def convert2base(self, wp_list): # converts local waypoints to base_link frame
         local_wp_msg = WaypointArray()
         
-        for i in range(len(wp_list)):
-            wp = Waypoint()
+        for wp in wp_list:
+            wp_new = Waypoint()
             v_yaw = self.yaw
             v_x = self.position[0]
             v_y = self.position[1]
-            wp_x = wp_list[i].pose.position.x
-            wp_y = wp_list[i].pose.position.y
+            wp_x = wp.pose.position.x
+            wp_y = wp.pose.position.y
             
             # Transformation about the z-axis
-            wp.frame_id = "base_link"
-            wp.pose.position.x = ((wp_x-v_x)*math.cos(-v_yaw)-(wp_y-v_y)*math.sin(-v_yaw))
-            wp.pose.position.y = ((wp_x-v_x)*math.sin(-v_yaw)+(wp_y-v_y)*math.cos(-v_yaw))
-            wp.velocity.linear.x = wp_list[i].velocity.linear.x
-            local_wp_msg.waypoints.append(wp)
+            wp_new.frame_id = "ego_vehicle"
+            wp_new.pose.position.x = ((wp_x-v_x)*math.cos(-v_yaw)-(wp_y-v_y)*math.sin(-v_yaw))
+            wp_new.pose.position.y = ((wp_x-v_x)*math.sin(-v_yaw)+(wp_y-v_y)*math.cos(-v_yaw))
+            wp_new.velocity.linear.x = wp.velocity.linear.x
+            local_wp_msg.waypoints.append(wp_new)
             
         return local_wp_msg
 
 
     def spin(self):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
+            # Publishes global waypoints in the base_link frame
+            global_wp_bl = self.convert2base(self.global_waypoints)
+            self.global_wp_bl_pub.publish(global_wp_bl)
+
             nearest_index = self.find_nearest_waypoint(self.global_wp_coords, self.position)
 
             # Speed cap
-            # self.global_waypoints = self.speed_cap(self.global_waypoints)
+            self.global_waypoints = self.speed_cap(self.global_waypoints)
+
             # Stop at the end of the global waypoints
             slowed_global = self.slow_to_stop(self.global_waypoints, len(self.global_waypoints)-1)
+            
             # Extract up to local_plan_max_length waypoints as the local plan
             local_plan_max_length = self.get_parameter('local_plan_max_length').get_parameter_value().integer_value
             final_wp_index = min(len(self.global_waypoints)-1, nearest_index + local_plan_max_length - 1)
             local_waypoints = slowed_global[nearest_index:final_wp_index+1]
-            # Stop for the first detected object that blocks path
-            stopping_indices = self.find_object_waypoints(local_waypoints)
-            if len(stopping_indices) > 0:
-                local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
+
+            # Regulates velocity of waypoints at curves
+            local_waypoints = self.slow_at_curve(local_waypoints)
 
             # Publishes local waypoints in the map frame
             local_map_wp_msg = WaypointArray()
             local_map_wp_msg.waypoints = local_waypoints
-            self.waypoints_map_pub.publish(local_map_wp_msg)
-            # Publishes local waypoints in the base_link frame
+            self.local_wp_map_pub.publish(local_map_wp_msg)
+
+            # Stop for the first detected object that blocks path
             local_wp_msg = self.convert2base(local_waypoints)
-            self.waypoints_pub.publish(local_wp_msg)
+            stopping_indices = self.find_object_waypoints(local_wp_msg.waypoints)
+            if len(stopping_indices) > 0:
+                local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
+
+            # Publishes local waypoints in the base_link frame
+            self.local_wp_bl_pub.publish(local_wp_msg)
+
 
 def main(args=None):
     rclpy.init(args=args)
