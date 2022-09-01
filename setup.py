@@ -29,6 +29,7 @@ setup(
             'waypoint_visualiser = velocity_planner.waypoint_visualiser:main',
             'object_visualiser = velocity_planner.object_visualiser:main',
             'waypoint_reader = velocity_planner.waypoint_reader:main',
+            'simple_trapezoidal = velocity_planner.simple_trapezoidal:main',
         ],
     },
 )
