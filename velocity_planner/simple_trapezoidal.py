@@ -8,7 +8,7 @@ class SimpleTrapezoidalPlanner(Node):
 
     def __init__(self):
         super().__init__('simple_trapezoidal_publisher')
-        self.publisher_ = self.create_publisher(TwistStamped, 'twist_cmd', 10)
+        self.publisher_ = self.create_publisher(TwistStamped, '/twist_cmd', 10)
 
         self.start_delay = 5 # seconds
         self.initial_time_ns = self.get_clock().now().nanoseconds
@@ -24,8 +24,10 @@ class SimpleTrapezoidalPlanner(Node):
         # self.publisher_.publish(msg)
         current_time_ns = self.get_clock().now().nanoseconds
         elapsed_time = float(current_time_ns - self.initial_time_ns) / 10**9
-        command_vel = compute_vel_trapezoidal(elapsed_time, 5.0, 1.0, 1.0, 5.0, 5.0)
+        command_vel = compute_vel_trapezoidal(time=elapsed_time, max_vel=1.0, max_accel=0.1, min_accel=1.0, start_delay=0.0, constant_vel_period=5.0)
         self.get_logger().info(f'{command_vel}')
+        msg.twist.linear.x = command_vel
+        self.publisher_.publish(msg)
 
 def compute_vel_trapezoidal(time: float, max_vel: float, max_accel: float, min_accel: float, start_delay: float, constant_vel_period: float):
     """ Generates a trapezoidal velocity profile with the given parameters, accelerating from zero velocity at time zero.
@@ -45,7 +47,7 @@ def compute_vel_trapezoidal(time: float, max_vel: float, max_accel: float, min_a
 
     # Initial acceleration
     if time < start_delay:
-        command_vel = 0
+        command_vel = 0.0
     elif time < start_delay + ramp_up_time:
         command_vel = (time-start_delay) * max_accel
     # Constant velocity
@@ -56,7 +58,7 @@ def compute_vel_trapezoidal(time: float, max_vel: float, max_accel: float, min_a
         command_vel = max_vel - min_accel*(time - start_delay - ramp_up_time - constant_vel_period)
     # Zero velocity
     else:
-        command_vel = 0
+        command_vel = 0.0
 
     return command_vel
 
