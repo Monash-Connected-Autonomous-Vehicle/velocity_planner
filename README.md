@@ -16,7 +16,7 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 - Go to the `src` directory: `cd ~/colcon_ws/src`
 - Clone the source code: `git clone `
 - Go to the root of the workspace: `cd ~/colcon_ws`
-- Build: `colcon build --symlink-install velocity_planner`
+- Build: `colcon build --symlink-install --packages-up-to velocity_planner`
 
 ## Usage
 ### Inputs
@@ -31,12 +31,15 @@ Yellow cubes: global waypoints, Purple circle: current pose, Green/red circles: 
 
 ### Visualise global and local waypoints
 - `ros2 run velocity_planner waypoint_visualiser`
-- `rviz2 -d planner.rviz`
+- `cd velocity_planner/ && rviz2 -d planner.rviz`
 
-### Test using fake global waypoints
+## Publishing waypoints
+### 1. Test using fake global waypoints
+- `. install/setup.bash`
 - `ros2 run velocity_planner fake_waypoint_publisher`
 
-### Test using waypoints from a csv file
+### or 2. Test using waypoints from a csv file
+- `. install/setup.bash`
 - `ros2 run velocity_planner waypoint_reader town01_small_waypoints.csv`
 
 ## Example run 
