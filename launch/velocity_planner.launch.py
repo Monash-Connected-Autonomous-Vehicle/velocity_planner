@@ -13,5 +13,15 @@ def generate_launch_description():
                 'local_plan_max_length': 25,
             }]
         ),
+        Node(
+            package='velocity_planner',
+            executable='waypoint_visualiser',
+            name='waypoint_visualiser',
+        ),
+        Node(
+            package='velocity_planner',
+            executable='object_visualiser',
+            name='object_visualiser',
+        ),
     ])
 
