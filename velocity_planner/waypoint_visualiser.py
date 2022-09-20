@@ -10,7 +10,7 @@ class WaypointVisualiser(Node):
         super().__init__('waypoint_visusaliser')
 
         self.global_sub = self.create_subscription(WaypointArray,
-            'global_baselink_waypoints', self.global_callback, 10)
+            'global_waypoints', self.global_callback, 10)
         self.global_sub = self.create_subscription(WaypointArray,
             'local_baselink_waypoints', self.local_callback, 10)
 

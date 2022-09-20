@@ -19,7 +19,7 @@ class VelocityPlanner(Node):
         # Subscriber
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
-        self.initial_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
+        self.current_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
             'current_pose', self.initial_pose_callback, 10)
         self.initial_pose_sub  # prevent unused variable warning
         self.waypoints_sub = self.create_subscription(WaypointArray,
@@ -135,14 +135,19 @@ class VelocityPlanner(Node):
             len_b = np.linalg.norm(wp_coords[i] - wp_coords[i+1])
             len_a = np.linalg.norm(wp_coords[i] - wp_coords[i+2])
             len_c = np.linalg.norm(wp_coords[i+1] - wp_coords[i+2])
-            thet_bac = math.acos((len_b**2 + len_c**2 - len_a**2)/(2*len_b*len_c)) # cos rule
-            curve = 2*math.sin(thet_bac)/len_a # Menger curvature
-            vel_flipped = max(1.0/vel_cap, math.sqrt(curve/(mu*g))) # limiting maximum possible curve velocity to avoid exploding numbers
+            cos_theta = (len_b**2 + len_c**2 - len_a**2)/(2*len_b*len_c)
+            if abs(cos_theta) > 1.0:
+                # can occur due to floating point rounding errors
+                # limit to +/- 180 degrees
+                thet_bac = np.pi * np.sign(cos_theta) 
+            else:
+                thet_bac = math.acos((len_b**2 + len_c**2 - len_a**2)/(2*len_b*len_c)) # cos rule. angle between segments [i,i+1] and [i+1,i+2]
+            curvature = abs(2*math.sin(thet_bac)/len_a) # Menger curvature
+            vel_flipped = max(1.0/vel_cap, math.sqrt(curvature/(mu*g))) # limiting maximum possible curve velocity to avoid exploding numbers
             vel_max = min(vel_max, 1.0/vel_flipped) # local maximum velocity given curvature of waypoints
 
         for wp in slowed_waypoints:
             wp.velocity.linear.x = min(vel_max, wp.velocity.linear.x)
-            # print(vel_max)
 
         return slowed_waypoints
 
