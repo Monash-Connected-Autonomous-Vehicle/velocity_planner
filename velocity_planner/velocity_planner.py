@@ -1,26 +1,23 @@
-from tarfile import LENGTH_NAME
 import rclpy
 import logging
 from rclpy.node import Node
-
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray
 import numpy as np
 import math
 import tf2_ros
-from velocity_planner.vector_ops import q_normalise, qv_mult
-
+import velocity_planner.transforms as transforms
 
 class VelocityPlanner(Node):
 
     def __init__(self):
         super().__init__('velocity_planner')
 
-        # Subscriber
+        # Subscribers
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
         self.current_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
-            'current_pose', self.initial_pose_callback, 10)
+            'current_pose', self.current_pose_callback, 10)
         self.waypoints_sub = self.create_subscription(WaypointArray,
             'global_waypoints', self.waypoints_callback, 10)
         self.waypoints_sub  # prevent unused variable warning
@@ -28,18 +25,18 @@ class VelocityPlanner(Node):
             'detected_objects', self.objects_callback, 10)
         self.objects_sub  # prevent unused variable warning
 
-        # Publisher
-        self.global_wp_bl_pub = self.create_publisher(WaypointArray, 'global_baselink_waypoints', 10)
+        # Publishers
         self.local_wp_bl_pub = self.create_publisher(WaypointArray, 'local_baselink_waypoints', 10)
         self.local_wp_map_pub = self.create_publisher(WaypointArray, 'local_map_waypoints', 10)
         
-
+        # Parameters (can be changed in launch file)
         self.declare_parameter('max_velocity', 5.6) # maximum waypoint velocity used for speed capping
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
         self.declare_parameter('obj_waypoint_distance_threshold', 1.5) # if an object is within this distance of a path,
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
+        self.declare_parameter('vehicle_frame_id', "base_link")
 
         # Initialise tf buffer and listener
         self.tf_buffer = tf2_ros.Buffer()
@@ -54,13 +51,18 @@ class VelocityPlanner(Node):
         self.get_logger().set_level(logging.DEBUG)
 
 
-    def initial_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
+    def current_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
         self.position = np.array([pose_msg.pose.pose.position.x, pose_msg.pose.pose.position.y])
         self.yaw = pose_msg.pose.pose.orientation.z
+
+        if len(self.position) == 0:
+            self.get_logger().info("Received position")
         
         
     def waypoints_callback(self, msg: WaypointArray):
         # TODO: transform so that they can be in different coordinate systems
+        if len(self.global_wp_coords) == 0:
+            self.get_logger().info("Received global waypoints")
         self.global_waypoints = msg.waypoints
         self.global_wp_coords = np.array([(wp.pose.position.x, wp.pose.position.y) for wp in msg.waypoints])
         
@@ -162,22 +164,34 @@ class VelocityPlanner(Node):
         return capped_waypoints
 
 
-    def convert2base(self, wp_list): # converts local waypoints to base_link frame
+    def convert2base(self, wp_list): # converts given waypoints to base_link frame
+        """  """
+        vehicle_frame_id = self.get_parameter('vehicle_frame_id').get_parameter_value().string_value
+        # Wait until a transform is available from tf
+        try:
+            to_frame_rel = vehicle_frame_id
+            from_frame_rel = wp_list[0].frame_id
+            t = self.tf_buffer.lookup_transform(
+                to_frame_rel,
+                from_frame_rel,
+                rclpy.time.Time())
+        except tf2_ros.TransformException as ex:
+            self.get_logger().info(
+                f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
+            return
+
         local_wp_msg = WaypointArray()
         
         for wp in wp_list:
+            # Transform waypoint to vehicle coordinate frame
+            vehicle_matrix = transforms.tf_to_homogenous_mat(t)
+            wp_matrix = transforms.pose_to_homogenous_mat(wp.pose)
+            new_wp_matrix = np.dot(vehicle_matrix, wp_matrix)
+
             wp_new = Waypoint()
-            v_yaw = self.yaw
-            v_x = self.position[0]
-            v_y = self.position[1]
-            wp_x = wp.pose.position.x
-            wp_y = wp.pose.position.y
-            
-            # Transformation about the z-axis
-            wp_new.frame_id = "ego_vehicle"
-            wp_new.pose.position.x = ((wp_x-v_x)*math.cos(-v_yaw)-(wp_y-v_y)*math.sin(-v_yaw))
-            wp_new.pose.position.y = ((wp_x-v_x)*math.sin(-v_yaw)+(wp_y-v_y)*math.cos(-v_yaw))
+            wp_new.frame_id = vehicle_frame_id
             wp_new.velocity.linear.x = wp.velocity.linear.x
+            wp_new.pose = transforms.homogenous_mat_to_pose(new_wp_matrix)
             local_wp_msg.waypoints.append(wp_new)
             
         return local_wp_msg
@@ -185,21 +199,17 @@ class VelocityPlanner(Node):
 
     def spin(self):
         if len(self.position) > 0 and len(self.global_wp_coords) > 0:
-            # Publishes global waypoints in the base_link frame
-            global_wp_bl = self.convert2base(self.global_waypoints)
-            self.global_wp_bl_pub.publish(global_wp_bl)
-
             nearest_index = self.find_nearest_waypoint(self.global_wp_coords, self.position)
 
             # Speed cap
-            self.global_waypoints = self.speed_cap(self.global_waypoints)
+            capped_speed = self.speed_cap(self.global_waypoints)
 
             # Stop at the end of the global waypoints
-            slowed_global = self.slow_to_stop(self.global_waypoints, len(self.global_waypoints)-1)
+            slowed_global = self.slow_to_stop(capped_speed, len(capped_speed)-1)
             
             # Extract up to local_plan_max_length waypoints as the local plan
             local_plan_max_length = self.get_parameter('local_plan_max_length').get_parameter_value().integer_value
-            final_wp_index = min(len(self.global_waypoints)-1, nearest_index + local_plan_max_length - 1)
+            final_wp_index = min(len(slowed_global)-1, nearest_index + local_plan_max_length - 1)
             local_waypoints = slowed_global[nearest_index:final_wp_index+1]
 
             # Regulates velocity of waypoints at curves
@@ -210,14 +220,21 @@ class VelocityPlanner(Node):
             local_map_wp_msg.waypoints = local_waypoints
             self.local_wp_map_pub.publish(local_map_wp_msg)
 
-            # Stop for the first detected object that blocks path
+            # Publishes local waypoints in the base_link frame
             local_wp_msg = self.convert2base(local_waypoints)
+            self.local_wp_bl_pub.publish(local_wp_msg)
+
+            # Stop for the first detected object that blocks path
             stopping_indices = self.find_object_waypoints(local_wp_msg.waypoints)
             if len(stopping_indices) > 0:
                 local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
+            # TODO: publish these slowed waypoints
 
-            # Publishes local waypoints in the base_link frame
-            self.local_wp_bl_pub.publish(local_wp_msg)
+        # Log the reason that we cannot plan yet
+        if len(self.position) == 0:
+            self.get_logger().warn("Waiting for position")
+        if len(self.global_wp_coords) == 0:
+            self.get_logger().warn("Waiting for global waypoints")
 
 
 def main(args=None):
