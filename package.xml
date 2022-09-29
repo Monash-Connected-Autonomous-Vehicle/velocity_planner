@@ -8,6 +8,7 @@
   <license>TODO: License declaration</license>
 
   <exec_depend>mcav_interfaces</exec_depend>
+  <exec_depend>python-transforms3d-pip</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
