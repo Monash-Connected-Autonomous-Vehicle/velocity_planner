@@ -12,12 +12,18 @@ class WaypointVisualiser(Node):
         self.global_sub = self.create_subscription(WaypointArray,
             'global_waypoints', self.global_callback, 10)
         self.global_sub = self.create_subscription(WaypointArray,
-            'local_baselink_waypoints', self.local_callback, 10)
+            'local_map_waypoints', self.local_callback, 10)
 
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
 
-        self.local_waypoints_length = 40 # TODO: make into parameter
+        # these keep track of the length of the visualisation marker arrays published
+        # so that we can publish the correct number of DELETE markers
+        self.local_waypoints_length = 0
+        self.global_waypoints_length = 0
+
+        self.text_scale = 0.15
+        self.text_offset = self.text_scale * 3 # used to move text so it doesn't overlap waypoints
 
     def global_callback(self, msg):
         self.publish_global(msg.waypoints)
@@ -35,8 +41,8 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 2.0
-            pose_marker.scale.y = 2.0
+            pose_marker.scale.x = 0.2
+            pose_marker.scale.y = 0.2
             pose_marker.scale.z = 0.01
             top_speed = 5.5
             pose_marker.color.a = 0.5 # Don't forget to set the alpha!
@@ -53,10 +59,10 @@ class WaypointVisualiser(Node):
             velocity_marker.type = Marker.TEXT_VIEW_FACING
             velocity_marker.action = Marker.ADD
             velocity_marker.pose.position.x = waypoint.pose.position.x
-            velocity_marker.pose.position.y = waypoint.pose.position.y + 2.5
-            velocity_marker.scale.x = 1.0
-            velocity_marker.scale.y = 1.0
-            velocity_marker.scale.z = 1.0
+            velocity_marker.pose.position.y = waypoint.pose.position.y + self.text_offset 
+            velocity_marker.scale.x = self.text_scale
+            velocity_marker.scale.y = self.text_scale
+            velocity_marker.scale.z = self.text_scale
             velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
 
@@ -85,6 +91,9 @@ class WaypointVisualiser(Node):
             marker.action = Marker.DELETE
             markers.append(marker)
 
+        # update record of number of markers published so they can be deleted next time
+        self.local_waypoints_length = len(waypoints) 
+        
         marker_array = MarkerArray()
         marker_array.markers = markers
         self.local_vis_pub_.publish(marker_array)
@@ -99,9 +108,9 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.CUBE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.8
-            pose_marker.scale.y = 0.8
-            pose_marker.scale.z = 0.1
+            pose_marker.scale.x = 0.1
+            pose_marker.scale.y = 0.1
+            pose_marker.scale.z = 0.02
             pose_marker.color.a = 1.0 # Don't forget to set the alpha!
             pose_marker.color.r = 1.0
             pose_marker.color.g = 1.0
@@ -116,21 +125,37 @@ class WaypointVisualiser(Node):
             velocity_marker.type = Marker.TEXT_VIEW_FACING
             velocity_marker.action = Marker.ADD
             velocity_marker.pose.position.x = waypoint.pose.position.x
-            velocity_marker.pose.position.y = waypoint.pose.position.y + 2.5
-            velocity_marker.scale.x = 1.0
-            velocity_marker.scale.y = 1.0
-            velocity_marker.scale.z = 1.0
+            velocity_marker.pose.position.y = waypoint.pose.position.y + self.text_offset
+            velocity_marker.scale.x = self.text_scale
+            velocity_marker.scale.y = self.text_scale
+            velocity_marker.scale.z = self.text_scale
             velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
 
-            # changes text colour according to fraction of max speed
-            # green->red gradient for fast->slow
-            top_speed = 5.5
             velocity_marker.color.r = 1.0
             velocity_marker.color.g = 1.0
             velocity_marker.color.b = 0.0
 
             markers.append(velocity_marker)
+
+        # Remove extra markers
+        for index in range(self.global_waypoints_length):
+            marker = Marker()
+            marker.header.frame_id = waypoints[0].frame_id
+            marker.ns = 'global_waypoints'
+            marker.id = index
+            marker.action = Marker.DELETE
+            markers.append(marker)
+        for index in range(self.global_waypoints_length):
+            marker = Marker()
+            marker.header.frame_id = waypoints[0].frame_id
+            marker.ns = 'velocity'
+            marker.id = index
+            marker.action = Marker.DELETE
+            markers.append(marker)
+
+        # update record of number of markers published so they can be deleted next time
+        self.local_waypoints_length = len(waypoints) 
 
         marker_array = MarkerArray()
         marker_array.markers = markers
