@@ -17,8 +17,8 @@ class FakeWaypoints(Node):
 
     def init_waypoints(self):
         """ Modifies self.waypoints """
-        x = np.arange(0.0, 10.0, 0.5)
-        y = np.zeros(int(10/0.5))
+        x = np.arange(-5.0, 10.0, 0.5)
+        y = np.zeros(len(x))
 
         for i in range(len(x)):
             waypoint = Waypoint()
