@@ -33,7 +33,7 @@ class VelocityPlanner(Node):
         self.declare_parameter('max_velocity', 5.6) # maximum waypoint velocity used for speed capping
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
-        self.declare_parameter('obj_waypoint_distance_threshold', 1.5) # if an object is within this distance of a path,
+        self.declare_parameter('obj_waypoint_distance_threshold', 0.8) # if an object is within this distance of a path,
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
         self.declare_parameter('vehicle_frame_id', "base_link")
@@ -95,7 +95,7 @@ class VelocityPlanner(Node):
 
             #self.get_logger().info(f" obj {obj.object_id} wp_vec {wp_obj_vec} pos {position} clusters.")
             distance_to_path = np.linalg.norm(wp_obj_vec)
-            #self.get_logger().info(f"d2p {distance_to_path}")
+            # self.get_logger().info(f"d2p {distance_to_path}")
             if distance_to_path < distance_threshold:
                 stopping_index = max(nearest_wp-stopping_wp_count, 0)
                 stopping_indices.append(stopping_index)
@@ -225,7 +225,7 @@ class VelocityPlanner(Node):
             self.local_wp_bl_pub.publish(local_wp_msg)
 
             # Stop for the first detected object that blocks path
-            stopping_indices = self.find_object_waypoints(local_wp_msg.waypoints)
+            stopping_indices = self.find_object_waypoints(local_map_wp_msg.waypoints)
             if len(stopping_indices) > 0:
                 local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
             # TODO: publish these slowed waypoints
