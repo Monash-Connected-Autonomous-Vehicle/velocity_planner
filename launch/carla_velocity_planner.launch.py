@@ -11,6 +11,7 @@ def generate_launch_description():
             parameters=[{
                 'max_acceleration': 0.5,
                 'local_plan_max_length': 25,
+                'vehicle_frame_id': "ego_vehicle",
             }]
         ),
         Node(
