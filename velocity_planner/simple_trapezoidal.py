@@ -24,7 +24,7 @@ class SimpleTrapezoidalPlanner(Node):
         # self.publisher_.publish(msg)
         current_time_ns = self.get_clock().now().nanoseconds
         elapsed_time = float(current_time_ns - self.initial_time_ns) / 10**9
-        command_vel = compute_vel_trapezoidal(time=elapsed_time, max_vel=1.0, max_accel=0.1, min_accel=1.0, start_delay=0.0, constant_vel_period=5.0)
+        command_vel = compute_vel_trapezoidal(time=elapsed_time, max_vel=14.0, max_accel=2.0, min_accel=1.0, start_delay=0.0, constant_vel_period=15.0)
         self.get_logger().info(f'{command_vel}')
         msg.twist.linear.x = command_vel
         self.publisher_.publish(msg)
