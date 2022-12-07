@@ -41,6 +41,8 @@ class PoseEstimateToTf(Node):
 
 
     def initial_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
+        self.get_logger().info("Received pose estimate")
+
         t = TransformStamped() # Create an empty message of type TransformStamped
 
         # Read message content and assign it to
