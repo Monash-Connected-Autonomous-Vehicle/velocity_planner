@@ -1,0 +1,7 @@
+<launch>
+    <arg name="waypoints_file" default="waypoints.csv" description="The location of a waypoints csv file (absolute path)" />
+
+    <node pkg="velocity_planner" exec="waypoint_reader">
+	<param name="waypoint_filename" value="$(var waypoints_file)" />
+    </node>
+</launch>
