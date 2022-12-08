@@ -18,7 +18,7 @@ def generate_launch_description():
             package='velocity_planner',
             executable='pose_estimate_to_tf',
             name='pose_estimate_to_tf',
-            remappings=[("/current_pose", "/ndt_pose")],
+            remappings=[("/initialpose", "/ndt_pose")],
         ),
         Node(
             package='velocity_planner',
