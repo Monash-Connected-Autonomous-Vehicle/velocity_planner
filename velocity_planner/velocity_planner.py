@@ -1,7 +1,7 @@
 import rclpy
 import logging
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped
 from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray
 import numpy as np
 import math
@@ -16,7 +16,7 @@ class VelocityPlanner(Node):
         # Subscribers
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
-        self.current_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
+        self.current_pose_sub = self.create_subscription(PoseStamped,
             'current_pose', self.current_pose_callback, 10)
         self.waypoints_sub = self.create_subscription(WaypointArray,
             'global_waypoints', self.waypoints_callback, 10)
@@ -51,9 +51,9 @@ class VelocityPlanner(Node):
         self.get_logger().set_level(logging.DEBUG)
 
 
-    def current_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
-        self.position = np.array([pose_msg.pose.pose.position.x, pose_msg.pose.pose.position.y])
-        self.yaw = pose_msg.pose.pose.orientation.z
+    def current_pose_callback(self, pose_msg: PoseStamped):
+        self.position = np.array([pose_msg.pose.position.x, pose_msg.pose.position.y])
+        self.yaw = pose_msg.pose.orientation.z
 
         if len(self.position) == 0:
             self.get_logger().info("Received position")

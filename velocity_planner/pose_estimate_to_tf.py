@@ -5,7 +5,7 @@ as well as to the /current_pose topic. This is helpful for debugging the planner
 import rclpy
 import logging
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import TransformStamped
 from tf2_ros import TransformBroadcaster
 
@@ -17,12 +17,12 @@ class PoseEstimateToTf(Node):
         # Subscriber
         timer_period = 0.01  # seconds
         self.spinner = self.create_timer(timer_period, self.broadcast_tf)
-        self.initial_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
+        self.initial_pose_sub = self.create_subscription(PoseStamped,
             'initialpose', self.initial_pose_callback, 10)
         self.initial_pose_sub  # prevent unused variable warning
 
         # Publisher
-        self.current_pose_pub = self.create_publisher(PoseWithCovarianceStamped, 'current_pose', 10)
+        self.current_pose_pub = self.create_publisher(PoseStamped, 'current_pose', 10)
 
         self.tf_broadcaster = TransformBroadcaster(self)
         self.current_pose = None
@@ -36,13 +36,11 @@ class PoseEstimateToTf(Node):
             self.current_pose.header.stamp = self.get_clock().now().to_msg()
             # Send the transformation
             self.tf_broadcaster.sendTransform(self.current_tf)
-            # Publish the pose msg of type PoseWithCovarianceStamped
+            # Publish the pose msg of type PoseStamped
             self.current_pose_pub.publish(self.current_pose)
 
 
-    def initial_pose_callback(self, pose_msg: PoseWithCovarianceStamped):
-        self.get_logger().info("Received pose estimate")
-
+    def initial_pose_callback(self, pose_msg: PoseStamped):
         t = TransformStamped() # Create an empty message of type TransformStamped
 
         # Read message content and assign it to
@@ -52,12 +50,12 @@ class PoseEstimateToTf(Node):
         t.child_frame_id = 'base_link'
 
         # Set transform translation to msg pose position
-        t.transform.translation.x = pose_msg.pose.pose.position.x
-        t.transform.translation.y = pose_msg.pose.pose.position.y
-        t.transform.translation.z = pose_msg.pose.pose.position.z
+        t.transform.translation.x = pose_msg.pose.position.x
+        t.transform.translation.y = pose_msg.pose.position.y
+        t.transform.translation.z = pose_msg.pose.position.z
 
         # Set transform rotation to pose msg orientation
-        t.transform.rotation = pose_msg.pose.pose.orientation
+        t.transform.rotation = pose_msg.pose.orientation
 
         self.current_tf = t
         self.current_pose = pose_msg
