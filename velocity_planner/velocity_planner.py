@@ -222,7 +222,8 @@ class VelocityPlanner(Node):
 
             # Publishes local waypoints in the base_link frame
             local_wp_msg = self.convert2base(local_waypoints)
-            self.local_wp_bl_pub.publish(local_wp_msg)
+            if local_wp_msg is not None:
+                self.local_wp_bl_pub.publish(local_wp_msg)
 
             # Stop for the first detected object that blocks path
             stopping_indices = self.find_object_waypoints(local_map_wp_msg.waypoints)
