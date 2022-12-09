@@ -2,7 +2,7 @@ import rclpy
 import logging
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
-from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray
+from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray, DetectedObject
 import numpy as np
 import math
 import tf2_ros
@@ -14,7 +14,7 @@ class VelocityPlanner(Node):
         super().__init__('velocity_planner')
 
         # Subscribers
-        timer_period = 0.01  # seconds
+        timer_period = 0.05  # seconds
         self.spinner = self.create_timer(timer_period, self.spin)
         self.current_pose_sub = self.create_subscription(PoseStamped,
             'current_pose', self.current_pose_callback, 10)
@@ -33,7 +33,7 @@ class VelocityPlanner(Node):
         self.declare_parameter('max_velocity', 5.6) # maximum waypoint velocity used for speed capping
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
-        self.declare_parameter('obj_waypoint_distance_threshold', 0.8) # if an object is within this distance of a path,
+        self.declare_parameter('obj_waypoint_distance_threshold', 2.0) # if an object is within this distance of a path,
         # it will be considered as blocking the path
         self.declare_parameter('obj_stopping_waypoint_count', 3) # number of waypoints before object to stop at
         self.declare_parameter('vehicle_frame_id', "base_link")
@@ -68,7 +68,33 @@ class VelocityPlanner(Node):
         
 
     def objects_callback(self, msg: DetectedObjectArray):
-        self.objects = msg.detected_objects
+        # Convert objects to the map frame so everything is in the same frame
+        self.objects = [self.transform_to_map(obj) for obj in msg.detected_objects]
+    
+    def transform_to_map(self, obj: DetectedObject):
+        """ Applies a transformation to the pose of the object so that it is with respect to the map frame """
+        # Wait until a transform is available from tf
+        map_frame_id = "map"
+        try:
+            to_frame_rel = map_frame_id
+            from_frame_rel = obj.frame_id
+            t = self.tf_buffer.lookup_transform(
+                to_frame_rel,
+                from_frame_rel,
+                rclpy.time.Time())
+
+            tf_matrix = transforms.tf_to_homogenous_mat(t)
+            object_matrix = transforms.pose_to_homogenous_mat(obj.pose)
+            new_object_matrix = np.dot(tf_matrix, object_matrix)
+            new_object = obj
+            new_object.frame_id = map_frame_id
+            new_object.pose = transforms.homogenous_mat_to_pose(new_object_matrix)
+
+            return new_object
+
+        except tf2_ros.TransformException as ex:
+            self.get_logger().info(
+                f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
 
 
     def find_nearest_waypoint(self, waypoint_coords, position) -> int:
@@ -215,21 +241,20 @@ class VelocityPlanner(Node):
             # Regulates velocity of waypoints at curves
             local_waypoints = self.slow_at_curve(local_waypoints)
 
-            # Publishes local waypoints in the map frame
+            # Stop for the first detected object that blocks path
+            stopping_indices = self.find_object_waypoints(local_waypoints)
+            if len(stopping_indices) > 0:
+                local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
+            
+            # Publish local waypoints in the map frame
             local_map_wp_msg = WaypointArray()
             local_map_wp_msg.waypoints = local_waypoints
             self.local_wp_map_pub.publish(local_map_wp_msg)
 
-            # Publishes local waypoints in the base_link frame
+            # Publish local waypoints in the base_link frame
             local_wp_msg = self.convert2base(local_waypoints)
             if local_wp_msg is not None:
                 self.local_wp_bl_pub.publish(local_wp_msg)
-
-            # Stop for the first detected object that blocks path
-            stopping_indices = self.find_object_waypoints(local_map_wp_msg.waypoints)
-            if len(stopping_indices) > 0:
-                local_waypoints = self.slow_to_stop(local_waypoints, min(stopping_indices))
-            # TODO: publish these slowed waypoints
 
         # Log the reason that we cannot plan yet
         if len(self.position) == 0:

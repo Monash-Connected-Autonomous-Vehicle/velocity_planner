@@ -41,11 +41,11 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.2
-            pose_marker.scale.y = 0.2
+            pose_marker.scale.x = 0.8
+            pose_marker.scale.y = 0.8
             pose_marker.scale.z = 0.01
-            top_speed = 5.5
-            pose_marker.color.a = 0.5 # Don't forget to set the alpha!
+            top_speed = 2.5
+            pose_marker.color.a = 1.0 # Don't forget to set the alpha!
             pose_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
             pose_marker.color.g = waypoint.velocity.linear.x/top_speed
             pose_marker.color.b = 0.0
@@ -68,9 +68,9 @@ class WaypointVisualiser(Node):
 
             # changes text colour according to fraction of max speed
             # green->red gradient for fast->slow
-            top_speed = 5.5
-            velocity_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
-            velocity_marker.color.g = 1.0*(waypoint.velocity.linear.x/top_speed)
+            top_speed = 2.5
+            velocity_marker.color.r = max(0.0, 1.0-waypoint.velocity.linear.x/top_speed)
+            velocity_marker.color.g = min(1.0, 1.0*(waypoint.velocity.linear.x/top_speed))
             velocity_marker.color.b = 0.0
 
             markers.append(velocity_marker)
