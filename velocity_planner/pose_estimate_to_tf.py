@@ -15,8 +15,6 @@ class PoseEstimateToTf(Node):
         super().__init__('pose_estimate_to_tf')
 
         # Subscriber
-        timer_period = 0.01  # seconds
-        self.spinner = self.create_timer(timer_period, self.broadcast_tf)
         self.initial_pose_sub = self.create_subscription(PoseStamped,
             'initialpose', self.initial_pose_callback, 10)
         self.initial_pose_sub  # prevent unused variable warning
@@ -59,6 +57,8 @@ class PoseEstimateToTf(Node):
 
         self.current_tf = t
         self.current_pose = pose_msg
+
+        self.broadcast_tf()
 
 
 def main(args=None):
