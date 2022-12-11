@@ -8,7 +8,7 @@ class InitPose(Node):
     def __init__(self):
         super().__init__('initial_pose_publisher')
         self.publisher_ = self.create_publisher(PoseWithCovarianceStamped, '/ekf_pose_with_covariance', 10)
-        timer_period = 0.05 # seconds
+        timer_period = 0.5 # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         # self.get_logger().info('Publishing "%d" detected_objects' % len(self.detected_objects))

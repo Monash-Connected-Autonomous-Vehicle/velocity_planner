@@ -1,8 +1,11 @@
 import rclpy
+import numpy as np
 from rclpy.node import Node
 
 from visualization_msgs.msg import Marker, MarkerArray
 from mcav_interfaces.msg import WaypointArray
+
+from std_msgs.msg import Float32, String
 
 class WaypointVisualiser(Node):
 
@@ -16,6 +19,11 @@ class WaypointVisualiser(Node):
 
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
+        self.test_pub = self.create_publisher(Float32, 'test_data2', 10)
+        self.test_pub3 = self.create_publisher(String, 'test_data3', 10)
+        self.test_pub4 = self.create_publisher(String, 'test_data4', 10)
+
+        self.waypointArrayArray = []
 
         # these keep track of the length of the visualisation marker arrays published
         # so that we can publish the correct number of DELETE markers
@@ -31,7 +39,57 @@ class WaypointVisualiser(Node):
     def local_callback(self, msg):
         self.publish_local(msg.waypoints)
 
+    def waypoints_filter(self, new_local_waypoints):
+        filter_size = 5
+        msg = String()
+        msg.data = str(new_local_waypoints[0].velocity.linear.x)
+        self.test_pub3.publish(msg)
+        self.waypointArrayArray.insert(0, new_local_waypoints) # insert new local waypoints into first index of the array
+        
+        if len(self.waypointArrayArray) == filter_size + 1:
+            self.waypointArrayArray.pop(filter_size)
+        else:
+            return new_local_waypoints
+
+        shifted_waypointArrayArray = [new_local_waypoints]
+        x = new_local_waypoints[0].pose.position.x
+        y = new_local_waypoints[0].pose.position.y
+        for i in range(filter_size - 1):
+            wp_arr = self.waypointArrayArray[i+1]
+            shifted_wpArr = []
+            for j in range(len(wp_arr)):
+                if wp_arr[j].pose.position.x == x and wp_arr[j].pose.position.y == y:
+                    shifted_wpArr = wp_arr[j:]
+                    break
+            shifted_waypointArrayArray.append(shifted_wpArr)
+
+        index = 0
+        for i in range(len(new_local_waypoints)):
+            waypoint_linear_velocity = np.zeros((1,0))
+            filter = True
+            for j in range(filter_size):
+                try:
+                    vel = shifted_waypointArrayArray[j][i].velocity.linear.x
+                except:
+                    filter = False
+                    break
+                waypoint_linear_velocity = np.append(waypoint_linear_velocity, vel)
+
+            if filter:
+                if np.unique(waypoint_linear_velocity).size != 1:
+                    index = np.where(waypoint_linear_velocity == np.median(waypoint_linear_velocity))[0][0]
+                    msg = String()
+                    msg.data = ','.join(str(vel) for vel in waypoint_linear_velocity.tolist()) + "/" + str(index)
+                    self.test_pub4.publish(msg)
+                    break
+            else:
+                break
+
+        return self.waypointArrayArray[index]
+
     def publish_local(self, waypoints):
+        waypoints = self.waypoints_filter(waypoints)
+
         markers = []
         for index, waypoint in enumerate(waypoints):
             pose_marker = Marker()
@@ -49,6 +107,11 @@ class WaypointVisualiser(Node):
             pose_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
             pose_marker.color.g = waypoint.velocity.linear.x/top_speed
             pose_marker.color.b = 0.0
+
+            if index == 6:
+                msg = Float32()
+                msg.data = pose_marker.color.r
+                self.test_pub.publish(msg)
 
             markers.append(pose_marker)
 

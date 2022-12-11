@@ -2,11 +2,12 @@ import rclpy
 import logging
 from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray
+from mcav_interfaces.msg import WaypointArray, Waypoint, DetectedObjectArray, WaypointArrayArray
 import numpy as np
 import math
 import tf2_ros
 import velocity_planner.transforms as transforms
+from std_msgs.msg import String
 
 class VelocityPlanner(Node):
 
