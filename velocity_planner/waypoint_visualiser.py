@@ -3,6 +3,7 @@ from rclpy.node import Node
 
 from visualization_msgs.msg import Marker, MarkerArray
 from mcav_interfaces.msg import WaypointArray
+import colorsys
 
 class WaypointVisualiser(Node):
 
@@ -22,7 +23,7 @@ class WaypointVisualiser(Node):
         self.local_waypoints_length = 0
         self.global_waypoints_length = 0
 
-        self.text_scale = 0.15
+        self.text_scale = 0.3
         self.text_offset = self.text_scale * 3 # used to move text so it doesn't overlap waypoints
 
     def global_callback(self, msg):
@@ -41,14 +42,22 @@ class WaypointVisualiser(Node):
             pose_marker.type = Marker.SPHERE
             pose_marker.action = Marker.ADD
             pose_marker.pose = waypoint.pose
-            pose_marker.scale.x = 0.8
-            pose_marker.scale.y = 0.8
+            pose_marker.scale.x = 0.6
+            pose_marker.scale.y = 0.6
             pose_marker.scale.z = 0.01
-            top_speed = 2.5
-            pose_marker.color.a = 1.0 # Don't forget to set the alpha!
-            pose_marker.color.r = 1.0-waypoint.velocity.linear.x/top_speed
-            pose_marker.color.g = waypoint.velocity.linear.x/top_speed
-            pose_marker.color.b = 0.0
+            top_speed = 5.5
+            pose_marker.color.a = 0.9 # Don't forget to set the alpha!
+
+            # changes colour according to fraction of max speed
+            # green->red gradient for fast->slow
+            top_speed = 5.6
+            green_hue = 90
+            speed_fraction = waypoint.velocity.linear.x/top_speed
+            interpolated_hue = green_hue*speed_fraction/255
+            (r, g, b) = colorsys.hsv_to_rgb(interpolated_hue, 1.0, 1.0)
+            pose_marker.color.r = float(r)
+            pose_marker.color.g = float(g)
+            pose_marker.color.b = float(b)
 
             markers.append(pose_marker)
 
@@ -63,15 +72,12 @@ class WaypointVisualiser(Node):
             velocity_marker.scale.x = self.text_scale
             velocity_marker.scale.y = self.text_scale
             velocity_marker.scale.z = self.text_scale
-            velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
+            velocity_marker.color.a = 0.9 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
 
-            # changes text colour according to fraction of max speed
-            # green->red gradient for fast->slow
-            top_speed = 2.5
-            velocity_marker.color.r = max(0.0, 1.0-waypoint.velocity.linear.x/top_speed)
-            velocity_marker.color.g = min(1.0, 1.0*(waypoint.velocity.linear.x/top_speed))
-            velocity_marker.color.b = 0.0
+            velocity_marker.color.r = float(r)
+            velocity_marker.color.g = float(g)
+            velocity_marker.color.b = float(b)
 
             markers.append(velocity_marker)
 
@@ -129,7 +135,7 @@ class WaypointVisualiser(Node):
             velocity_marker.scale.x = self.text_scale
             velocity_marker.scale.y = self.text_scale
             velocity_marker.scale.z = self.text_scale
-            velocity_marker.color.a = 0.5 # Don't forget to set the alpha!
+            velocity_marker.color.a = 0.9 # Don't forget to set the alpha!
             velocity_marker.text = f"{waypoint.velocity.linear.x:.2f}"
 
             velocity_marker.color.r = 1.0
