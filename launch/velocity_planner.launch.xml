@@ -7,9 +7,9 @@
         <param name="local_plan_max_length" value="25" />
         <param name="max_velocity" value="$(var max_velocity)" />
     </node>
-    <!-- <node pkg="velocity_planner" exec="pose_estimate_to_tf" name="pose_estimate_to_tf" >
+    <node pkg="velocity_planner" exec="pose_estimate_to_tf" name="pose_estimate_to_tf" >
         <remap from="/initialpose" to="$(var pose_topic)" />
-    </node> -->
+    </node>
     <node pkg="velocity_planner" exec="waypoint_visualiser" name="waypoint_visualiser" >
         <param name="max_velocity" value="$(var max_velocity)" />
     </node>
