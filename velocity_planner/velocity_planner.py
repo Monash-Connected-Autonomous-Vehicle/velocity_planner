@@ -30,7 +30,7 @@ class VelocityPlanner(Node):
         self.local_wp_map_pub = self.create_publisher(WaypointArray, 'local_map_waypoints', 10)
         
         # Parameters (can be changed in launch file)
-        self.declare_parameter('max_velocity', 5.6) # maximum waypoint velocity used for speed capping
+        self.declare_parameter('max_velocity', 0.1) # maximum waypoint velocity used for speed capping
         self.declare_parameter('local_plan_max_length', 25) # number of waypoints to plan ahead
         self.declare_parameter('max_acceleration', 0.5) # m/s/waypoint
         self.declare_parameter('obj_waypoint_distance_threshold', 2.0) # if an object is within this distance of a path,
