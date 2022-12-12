@@ -18,6 +18,8 @@ class WaypointVisualiser(Node):
         self.vis_pub_ = self.create_publisher(MarkerArray, 'visualization_marker_array', 0)
         self.local_vis_pub_ = self.create_publisher(MarkerArray, 'local_visualization_marker_array', 0)
 
+        self.declare_parameter('max_velocity', 5.6) # m/s
+
         # these keep track of the length of the visualisation marker arrays published
         # so that we can publish the correct number of DELETE markers
         self.local_waypoints_length = 0
@@ -34,6 +36,9 @@ class WaypointVisualiser(Node):
 
     def publish_local(self, waypoints):
         markers = []
+
+        top_speed = self.get_parameter('max_velocity').get_parameter_value().double_value
+
         for index, waypoint in enumerate(waypoints):
             pose_marker = Marker()
             pose_marker.header.frame_id = waypoints[0].frame_id
@@ -45,12 +50,10 @@ class WaypointVisualiser(Node):
             pose_marker.scale.x = 0.6
             pose_marker.scale.y = 0.6
             pose_marker.scale.z = 0.01
-            top_speed = 5.5
             pose_marker.color.a = 0.9 # Don't forget to set the alpha!
 
             # changes colour according to fraction of max speed
             # green->red gradient for fast->slow
-            top_speed = 5.6
             green_hue = 90
             speed_fraction = waypoint.velocity.linear.x/top_speed
             interpolated_hue = green_hue*speed_fraction/255

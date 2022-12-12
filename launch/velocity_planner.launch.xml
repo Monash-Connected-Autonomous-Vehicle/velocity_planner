@@ -1,0 +1,17 @@
+<launch>
+    <arg name="pose_topic" default="/ndt_pose" />
+    <arg name="max_velocity" default="5.6" description="Velocity to use for global plan in m/s" />
+    <node pkg="velocity_planner" exec="velocity_planner" name="velocity_planner" >
+        <remap from="/current_pose" to="$(var pose_topic)" />
+        <param name="max_acceleration" value="$(var max_velocity)" />
+        <param name="local_plan_max_length" value="25" />
+        <param name="max_velocity" value="$(var max_velocity)" />
+    </node>
+    <!-- <node pkg="velocity_planner" exec="pose_estimate_to_tf" name="pose_estimate_to_tf" >
+        <remap from="/initialpose" to="$(var pose_topic)" />
+    </node> -->
+    <node pkg="velocity_planner" exec="waypoint_visualiser" name="waypoint_visualiser" >
+        <param name="max_velocity" value="$(var max_velocity)" />
+    </node>
+    <node pkg="velocity_planner" exec="object_visualiser" name="object_visualiser" />
+</launch>
